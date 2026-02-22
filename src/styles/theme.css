@@ -477,3 +477,36 @@ button:disabled {
     gap: 12px;
     justify-content: flex-end;
 }
+
+/* ── Sync Button ── */
+.btn-sync {
+    background: #f2f2f7;
+    color: var(--accent);
+    padding: 6px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-sync:hover:not(:disabled) {
+    background: #e5e5ea;
+    transform: translateY(-1px);
+}
+
+.btn-sync:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.sync-status {
+    font-size: 11px;
+    color: var(--accent);
+    margin-top: 4px;
+    font-weight: 500;
+    animation: fadeIn 0.3s ease;
+}

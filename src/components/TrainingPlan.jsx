@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { trainingPlan, RACE_DATE } from "../data/trainingPlan";
 import { addRun, deleteRunByPlanDate } from "../services/runs";
 import { useAuth } from "../context/AuthContext";
+import { initGoogleIdentity, createCalendarEvent, requestAccessToken } from "../services/googleCalendar";
 
 const TYPE_COLORS = {
     Easy: "#34c759",
@@ -28,6 +29,12 @@ export default function TrainingPlan({ completedRuns = [], onRefresh }) {
     const [toggling, setToggling] = useState({});
     const [modalSession, setModalSession] = useState(null);
     const [duration, setDuration] = useState("");
+    const [syncing, setSyncing] = useState(false);
+    const [syncStatus, setSyncStatus] = useState(null);
+
+    useEffect(() => {
+        initGoogleIdentity();
+    }, []);
 
     const completedDates = useMemo(() => {
         // Map of date -> runId for plan runs
@@ -37,6 +44,29 @@ export default function TrainingPlan({ completedRuns = [], onRefresh }) {
         });
         return map;
     }, [completedRuns]);
+
+    async function handleSync() {
+        setSyncing(true);
+        setSyncStatus("Authenticeren...");
+        try {
+            await requestAccessToken();
+
+            let count = 0;
+            for (const session of trainingPlan) {
+                setSyncStatus(`Synchroniseren: ${++count}/${trainingPlan.length}`);
+                const isDone = !!completedDates[session.date];
+                await createCalendarEvent(session, isDone);
+                // Small delay to avoid Rate Limit Exceeded
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            setSyncStatus("Synchronisatie voltooid! ✅");
+            setTimeout(() => setSyncStatus(null), 5000);
+        } catch (err) {
+            console.error("Sync error:", err);
+            setSyncStatus("Fout bij synchroniseren. ❌");
+        }
+        setSyncing(false);
+    }
 
     async function handleToggle(session) {
         if (!user) return;
@@ -121,10 +151,22 @@ export default function TrainingPlan({ completedRuns = [], onRefresh }) {
             {/* Race countdown + progress */}
             <div className="plan-header">
                 <div>
-                    <h3>Training Plan</h3>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <h3>Training Plan</h3>
+                        <button
+                            className="btn-sync"
+                            onClick={handleSync}
+                            disabled={syncing}
+                        >
+                            {syncing ? "⏳ Syncing..." : "🗓️ Sync Google Calendar"}
+                        </button>
+                    </div>
                     <span className="stat-label">
                         🏁 {daysUntilRace} dagen tot de marathon
                     </span>
+                    {syncStatus && (
+                        <div className="sync-status">{syncStatus}</div>
+                    )}
                 </div>
                 <div className="plan-progress">
                     <div className="progress-bar">
