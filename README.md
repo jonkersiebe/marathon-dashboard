@@ -10,13 +10,14 @@ A premium, Apple-minimalist dashboard for marathon training, built with React, V
 - **Performance Visualization**: Weekly mileage charts using Recharts.
 - **Secure Authentication**: Firebase Auth for personal accounts and data isolation.
 - **Live Persistence**: Data is stored securely in Firebase Firestore.
-- **Coming Soon**: Google Calendar Sync to keep your training on schedule across all devices.
+- **Google Calendar Sync**: One-click synchronization of your entire training plan to your Google Calendar, complete with status emojis (🏃/✅) and training-type color coding.
 
 ## 🚀 Tech Stack
 
 - **Frontend**: React (Vite)
 - **Styling**: Vanilla CSS (Apple Minimal Design System)
 - **Database/Auth**: Firebase (Firestore & Authentication)
+- **APIs**: Google Calendar API (OAuth2)
 - **Charts**: Recharts
 - **Icons**: SF Pro Display inspired typography
 
@@ -34,7 +35,7 @@ A premium, Apple-minimalist dashboard for marathon training, built with React, V
    ```
 
 3. **Configure Environment Variables**:
-   Create a `.env` file in the root directory (use `.env.example` as a template) and add your Firebase configuration:
+   Create a `.env` file in the root directory (use `.env.example` as a template) and add your Firebase and Google credentials:
    ```env
    VITE_FIREBASE_API_KEY=your_api_key
    VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
@@ -43,6 +44,7 @@ A premium, Apple-minimalist dashboard for marathon training, built with React, V
    VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
    VITE_FIREBASE_APP_ID=your_app_id
    VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
+   VITE_GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
    ```
 
 4. **Run the development server**:
@@ -52,7 +54,7 @@ A premium, Apple-minimalist dashboard for marathon training, built with React, V
 
 ## 🔐 Security Note
 
-This project uses environment variables to keep sensitive Firebase keys out of version control. Ensure your `.env` file is added to `.gitignore`.
+This project uses environment variables to keep sensitive Firebase and Google keys out of version control. Ensure your `.env` file is added to `.gitignore`.
 
 ## 📈 Roadmap
 
@@ -62,5 +64,6 @@ This project uses environment variables to keep sensitive Firebase keys out of v
 - [x] Weekly Mileage Chart
 - [x] Complete 32-week Training Plan
 - [x] Training Session Check-off with duration input
-- [ ] Google Calendar API Integration
+- [x] Google Calendar API Integration
 - [ ] Progress sharing via Social Media
+- [ ] Strava API Integration (Future)
