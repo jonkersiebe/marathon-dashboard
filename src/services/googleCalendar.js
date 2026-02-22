@@ -1,12 +1,12 @@
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-const SCOPES = "https://www.googleapis.com/auth/calendar.events";
+const SCOPES = "https://www.googleapis.com/auth/calendar";
 
 let tokenClient;
 let accessToken = null;
+let marathonCalendarId = null;
 
 export function initGoogleIdentity() {
   return new Promise((resolve) => {
-    // Check if gapi and accounts are available
     const checkInterval = setInterval(() => {
       if (window.google && window.google.accounts) {
         clearInterval(checkInterval);
@@ -19,6 +19,7 @@ export function initGoogleIdentity() {
               throw response;
             }
             accessToken = response.access_token;
+            marathonCalendarId = null; // Reset on new token
             resolve(accessToken);
           },
         });
@@ -35,13 +36,13 @@ export function requestAccessToken() {
       return;
     }
     
-    // Override callback to resolve this specific promise
     tokenClient.callback = (response) => {
       if (response.error !== undefined) {
         reject(response);
         return;
       }
       accessToken = response.access_token;
+      marathonCalendarId = null; // Reset on new token
       resolve(accessToken);
     };
     
@@ -49,52 +50,149 @@ export function requestAccessToken() {
   });
 }
 
-export async function createCalendarEvent(session, isCompleted = false) {
-  if (!accessToken) {
-    await requestAccessToken();
+async function getMarathonCalendarId() {
+  if (marathonCalendarId) return marathonCalendarId;
+
+  // List calendar list
+  const data = await googleApiFetch("https://www.googleapis.com/calendar/v3/users/me/calendarList");
+  const existing = (data.items || []).find(c => c.summary === "Marathon Training");
+  
+  if (existing) {
+    marathonCalendarId = existing.id;
+    return marathonCalendarId;
   }
 
+  // Create new calendar
+  const newCal = await googleApiFetch("https://www.googleapis.com/calendar/v3/calendars", {
+    method: "POST",
+    body: JSON.stringify({ summary: "Marathon Training" })
+  });
+  
+  marathonCalendarId = newCal.id;
+  return marathonCalendarId;
+}
+
+async function googleApiFetch(url, options = {}) {
+  if (!accessToken) {
+    await requestAccessToken();
+    marathonCalendarId = null; // Reset ID in case user changed
+  }
+
+  const fetchWithToken = (token) => fetch(url, {
+    ...options,
+    headers: {
+      ...options.headers,
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  let response = await fetchWithToken(accessToken);
+
+  if (response.status === 401) {
+    accessToken = null;
+    await requestAccessToken();
+    response = await fetchWithToken(accessToken);
+  }
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error?.message || `Google API error: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+export async function findAllExistingEvents(date) {
+  const calId = await getMarathonCalendarId();
+  const d = new Date(date);
+  const timeMin = new Date(d.getTime() - 86400000).toISOString();
+  const timeMax = new Date(d.getTime() + 86400000).toISOString();
+
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&q=Run`;
+  
+  const data = await googleApiFetch(url);
+  const items = data.items || [];
+
+  return items.filter(item => {
+    const eventDate = item.start.date || (item.start.dateTime && item.start.dateTime.split("T")[0]);
+    if (eventDate !== date) return false;
+
+    const hasTag = item.description && item.description.includes("[MarathonDashboard]");
+    const looksLikeRun = item.summary && (item.summary.includes("Run:") || item.summary.includes("Run: "));
+    return hasTag || looksLikeRun;
+  });
+}
+
+export async function deleteCalendarEvent(eventId) {
+  const calId = await getMarathonCalendarId();
+  await googleApiFetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events/${eventId}`, {
+    method: "DELETE"
+  });
+}
+
+export async function syncCalendarEvent(session, isCompleted = false) {
+  const calId = await getMarathonCalendarId();
+  console.log(`Syncing to ${calId}: ${session.date}`);
+  
+  const existingEvents = await findAllExistingEvents(session.date);
+  
+  if (existingEvents.length > 1) {
+    for (let i = 1; i < existingEvents.length; i++) {
+        await deleteCalendarEvent(existingEvents[i].id).catch(err => console.error("Cleanup error:", err));
+    }
+  }
+
+  const existingEvent = existingEvents[0];
+  
   const title = (isCompleted ? "✅ " : "🏃 ") + `${session.type} Run: ${session.distance} km`;
-  const description = `${session.notes}\n\nType: ${session.type}\nAfstand: ${session.distance} km\nStatus: ${isCompleted ? "Voltooid" : "Gepland"}`;
+  const description = `${session.notes}\n\nType: ${session.type}\nAfstand: ${session.distance} km\nStatus: ${isCompleted ? "Voltooid" : "Gepland"}\n\n[MarathonDashboard]`;
 
   const event = {
     summary: title,
     description: description,
-    start: {
-      date: session.date,
-      timeZone: "Europe/Amsterdam",
-    },
-    end: {
-      date: session.date,
-      timeZone: "Europe/Amsterdam",
-    },
+    start: { date: session.date },
+    end: { date: session.date },
     colorId: getColorId(session.type),
   };
 
-  const response = await fetch(
-    "https://www.googleapis.com/calendar/v3/calendars/primary/events",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(event),
-    }
-  );
+  const method = existingEvent ? "PUT" : "POST";
+  const url = existingEvent 
+    ? `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events/${existingEvent.id}`
+    : `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events`;
 
-  if (!response.ok) {
-    const error = await response.json();
-    if (response.status === 401) {
-      // Token expired, retry once after requesting new token
-      accessToken = null;
-      await requestAccessToken();
-      return createCalendarEvent(session, isCompleted);
-    }
-    throw new Error(error.error.message);
+  return googleApiFetch(url, {
+    method: method,
+    body: JSON.stringify(event),
+  });
+}
+
+export async function cleanupPrimaryCalendar() {
+  console.log("Starting cleanup of primary calendar...");
+  // Use a broad window to find old sessions (last 2 weeks to next 32 weeks)
+  const timeMin = new Date(Date.now() - 14 * 86400000).toISOString();
+  const timeMax = new Date(Date.now() + 32 * 7 * 86400000).toISOString();
+
+  const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&q=Run`;
+  
+  const data = await googleApiFetch(url);
+  const items = (data.items || []).filter(item => {
+    const hasTag = item.description && item.description.includes("[MarathonDashboard]");
+    const looksLikeRun = item.summary && (item.summary.includes("Run:") || item.summary.includes("Run: "));
+    return hasTag || looksLikeRun;
+  });
+
+  console.log(`Found ${items.length} items to clean up from primary calendar.`);
+  
+  for (const item of items) {
+    await googleApiFetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${item.id}`, {
+      method: "DELETE"
+    }).catch(err => console.error("Cleanup item error:", err));
+    // Small delay
+    await new Promise(resolve => setTimeout(resolve, 50));
   }
-
-  return response.json();
+  
+  return items.length;
 }
 
 function getColorId(type) {

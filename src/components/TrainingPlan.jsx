@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { trainingPlan, RACE_DATE } from "../data/trainingPlan";
 import { addRun, deleteRunByPlanDate } from "../services/runs";
 import { useAuth } from "../context/AuthContext";
-import { initGoogleIdentity, createCalendarEvent, requestAccessToken } from "../services/googleCalendar";
+import { initGoogleIdentity, syncCalendarEvent, requestAccessToken, cleanupPrimaryCalendar } from "../services/googleCalendar";
 
 const TYPE_COLORS = {
     Easy: "#34c759",
@@ -31,6 +31,7 @@ export default function TrainingPlan({ completedRuns = [], onRefresh }) {
     const [duration, setDuration] = useState("");
     const [syncing, setSyncing] = useState(false);
     const [syncStatus, setSyncStatus] = useState(null);
+    const [cleaning, setCleaning] = useState(false);
 
     useEffect(() => {
         initGoogleIdentity();
@@ -55,7 +56,7 @@ export default function TrainingPlan({ completedRuns = [], onRefresh }) {
             for (const session of trainingPlan) {
                 setSyncStatus(`Synchroniseren: ${++count}/${trainingPlan.length}`);
                 const isDone = !!completedDates[session.date];
-                await createCalendarEvent(session, isDone);
+                await syncCalendarEvent(session, isDone);
                 // Small delay to avoid Rate Limit Exceeded
                 await new Promise(resolve => setTimeout(resolve, 100));
             }
@@ -68,6 +69,23 @@ export default function TrainingPlan({ completedRuns = [], onRefresh }) {
         setSyncing(false);
     }
 
+    async function handleCleanup() {
+        if (!window.confirm("Weet je zeker dat je alle 'Run' items uit je hoofdagenda wilt verwijderen? Dit raakt alleen de trainingen van dit dashboard.")) return;
+
+        setCleaning(true);
+        setSyncStatus("Hoofdagenda aan het opschonen... 🧹");
+        try {
+            await requestAccessToken();
+            const count = await cleanupPrimaryCalendar();
+            setSyncStatus(`${count} items verwijderd uit hoofdagenda! ✨`);
+            setTimeout(() => setSyncStatus(null), 5000);
+        } catch (err) {
+            console.error("Cleanup error:", err);
+            setSyncStatus("Fout bij opschonen. ❌");
+        }
+        setCleaning(false);
+    }
+
     async function handleToggle(session) {
         if (!user) return;
         const isDone = !!completedDates[session.date];
@@ -77,6 +95,9 @@ export default function TrainingPlan({ completedRuns = [], onRefresh }) {
             setToggling(prev => ({ ...prev, [session.date]: true }));
             try {
                 await deleteRunByPlanDate(user.uid, session.date);
+                // Direct Calendar Sync (Set back to planned)
+                await syncCalendarEvent(session, false).catch(e => console.log("Silent sync fail:", e));
+
                 if (onRefresh) await onRefresh();
             } catch (err) {
                 console.error("Error toggling session:", err);
@@ -105,6 +126,10 @@ export default function TrainingPlan({ completedRuns = [], onRefresh }) {
                 isPlanRun: true,
                 planDate: sessionToToggle.date
             });
+
+            // Direct Calendar Sync (Set to completed)
+            await syncCalendarEvent(sessionToToggle, true).catch(e => console.log("Silent sync fail:", e));
+
             if (onRefresh) await onRefresh();
         } catch (err) {
             console.error("Error adding plan run:", err);
@@ -153,13 +178,23 @@ export default function TrainingPlan({ completedRuns = [], onRefresh }) {
                 <div>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                         <h3>Training Plan</h3>
-                        <button
-                            className="btn-sync"
-                            onClick={handleSync}
-                            disabled={syncing}
-                        >
-                            {syncing ? "⏳ Syncing..." : "🗓️ Sync Google Calendar"}
-                        </button>
+                        <div style={{ display: "flex", gap: "8px" }}>
+                            <button
+                                className="btn-sync"
+                                onClick={handleSync}
+                                disabled={syncing || cleaning}
+                            >
+                                {syncing ? "⏳ Syncing..." : "🗓️ Sync Google Calendar"}
+                            </button>
+                            <button
+                                className="btn-secondary"
+                                onClick={handleCleanup}
+                                disabled={cleaning || syncing}
+                                style={{ padding: "6px 12px", fontSize: "12px" }}
+                            >
+                                🧹 Schoonmaak hoofdagenda
+                            </button>
+                        </div>
                     </div>
                     <span className="stat-label">
                         🏁 {daysUntilRace} dagen tot de marathon
