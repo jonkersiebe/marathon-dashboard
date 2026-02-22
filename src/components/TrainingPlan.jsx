@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { trainingPlan, RACE_DATE } from "../data/trainingPlan";
 import { addRun, deleteRunByPlanDate } from "../services/runs";
 import { useAuth } from "../context/AuthContext";
-import { initGoogleIdentity, syncCalendarEvent, requestAccessToken, cleanupPrimaryCalendar } from "../services/googleCalendar";
+import { initGoogleIdentity, syncCalendarEvent, requestAccessToken } from "../services/googleCalendar";
 
 const TYPE_COLORS = {
     Easy: "#34c759",
@@ -31,7 +31,6 @@ export default function TrainingPlan({ completedRuns = [], onRefresh }) {
     const [duration, setDuration] = useState("");
     const [syncing, setSyncing] = useState(false);
     const [syncStatus, setSyncStatus] = useState(null);
-    const [cleaning, setCleaning] = useState(false);
 
     useEffect(() => {
         initGoogleIdentity();
@@ -178,23 +177,13 @@ export default function TrainingPlan({ completedRuns = [], onRefresh }) {
                 <div>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                         <h3>Training Plan</h3>
-                        <div style={{ display: "flex", gap: "8px" }}>
-                            <button
-                                className="btn-sync"
-                                onClick={handleSync}
-                                disabled={syncing || cleaning}
-                            >
-                                {syncing ? "⏳ Syncing..." : "🗓️ Sync Google Calendar"}
-                            </button>
-                            <button
-                                className="btn-secondary"
-                                onClick={handleCleanup}
-                                disabled={cleaning || syncing}
-                                style={{ padding: "6px 12px", fontSize: "12px" }}
-                            >
-                                🧹 Schoonmaak hoofdagenda
-                            </button>
-                        </div>
+                        <button
+                            className="btn-sync"
+                            onClick={handleSync}
+                            disabled={syncing}
+                        >
+                            {syncing ? "⏳ Syncing..." : "🗓️ Sync Google Calendar"}
+                        </button>
                     </div>
                     <span className="stat-label">
                         🏁 {daysUntilRace} dagen tot de marathon

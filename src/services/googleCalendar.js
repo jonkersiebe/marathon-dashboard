@@ -100,7 +100,13 @@ async function googleApiFetch(url, options = {}) {
     throw new Error(error.error?.message || `Google API error: ${response.status}`);
   }
 
-  return response.json();
+  // Handle empty response (e.g. 204 No Content from DELETE)
+  if (response.status === 204 || response.headers.get("content-length") === "0") {
+    return {};
+  }
+
+  const text = await response.text();
+  return text ? JSON.parse(text) : {};
 }
 
 export async function findAllExistingEvents(date) {
@@ -165,34 +171,6 @@ export async function syncCalendarEvent(session, isCompleted = false) {
     method: method,
     body: JSON.stringify(event),
   });
-}
-
-export async function cleanupPrimaryCalendar() {
-  console.log("Starting cleanup of primary calendar...");
-  // Use a broad window to find old sessions (last 2 weeks to next 32 weeks)
-  const timeMin = new Date(Date.now() - 14 * 86400000).toISOString();
-  const timeMax = new Date(Date.now() + 32 * 7 * 86400000).toISOString();
-
-  const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&q=Run`;
-  
-  const data = await googleApiFetch(url);
-  const items = (data.items || []).filter(item => {
-    const hasTag = item.description && item.description.includes("[MarathonDashboard]");
-    const looksLikeRun = item.summary && (item.summary.includes("Run:") || item.summary.includes("Run: "));
-    return hasTag || looksLikeRun;
-  });
-
-  console.log(`Found ${items.length} items to clean up from primary calendar.`);
-  
-  for (const item of items) {
-    await googleApiFetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${item.id}`, {
-      method: "DELETE"
-    }).catch(err => console.error("Cleanup item error:", err));
-    // Small delay
-    await new Promise(resolve => setTimeout(resolve, 50));
-  }
-  
-  return items.length;
 }
 
 function getColorId(type) {
