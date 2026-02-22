@@ -101,11 +101,11 @@ function Countdown({ RACE_DATE }) {
     );
 }
 
+
 export default function Dashboard() {
     const { user, logout } = useAuth();
     const [runs, setRuns] = useState([]);
     const [loading, setLoading] = useState(true);
-
     const fetchRuns = useCallback(async () => {
         if (!user) return;
         setLoading(true);
