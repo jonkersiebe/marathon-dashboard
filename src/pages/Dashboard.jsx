@@ -48,6 +48,59 @@ function getWeeklyData(runs) {
         }));
 }
 
+function Countdown({ RACE_DATE }) {
+    const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
+
+    function calculateTimeLeft() {
+        const difference = +new Date(RACE_DATE) - +new Date();
+        let timeLeft = {};
+
+        if (difference > 0) {
+            timeLeft = {
+                days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+                hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+                minutes: Math.floor((difference / 1000 / 60) % 60),
+                seconds: Math.floor((difference / 1000) % 60),
+            };
+        }
+        return timeLeft;
+    }
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setTimeLeft(calculateTimeLeft());
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [RACE_DATE]);
+
+    return (
+        <div className="card countdown-card">
+            <div className="countdown-label">ROAD TO GENK MARATHON 🏁</div>
+            <div className="countdown-timer">
+                <div className="countdown-item">
+                    <span className="countdown-number">{timeLeft.days || 0}</span>
+                    <span className="countdown-unit">Dagen</span>
+                </div>
+                <div className="countdown-divider">:</div>
+                <div className="countdown-item">
+                    <span className="countdown-number">{String(timeLeft.hours || 0).padStart(2, '0')}</span>
+                    <span className="countdown-unit">Uur</span>
+                </div>
+                <div className="countdown-divider">:</div>
+                <div className="countdown-item">
+                    <span className="countdown-number">{String(timeLeft.minutes || 0).padStart(2, '0')}</span>
+                    <span className="countdown-unit">Min</span>
+                </div>
+                <div className="countdown-divider">:</div>
+                <div className="countdown-item">
+                    <span className="countdown-number">{String(timeLeft.seconds || 0).padStart(2, '0')}</span>
+                    <span className="countdown-unit">Sec</span>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function Dashboard() {
     const { user, logout } = useAuth();
     const [runs, setRuns] = useState([]);
