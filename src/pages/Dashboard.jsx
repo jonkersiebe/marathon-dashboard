@@ -1,9 +1,10 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import Layout from "../components/Layout";
 import AddRunForm from "../components/AddRunForm";
 import TrainingPlan from "../components/TrainingPlan";
 import { useAuth } from "../context/AuthContext";
 import { getRuns, deleteRun } from "../services/runs";
+import { trainingPlan, RACE_DATE } from "../data/trainingPlan";
 import {
     BarChart,
     Bar,
@@ -73,6 +74,41 @@ export default function Dashboard() {
         fetchRuns();
     }
 
+    const motivationStats = useMemo(() => {
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+
+        let completed = 0;
+        let missed = 0;
+        let upcoming = 0;
+
+        const completedDates = {};
+        runs.forEach(r => completedDates[r.date] = true);
+
+        trainingPlan.forEach(session => {
+            const sessionDate = new Date(session.date);
+            if (completedDates[session.date]) {
+                completed++;
+            } else if (sessionDate < now) {
+                missed++;
+            } else {
+                upcoming++;
+            }
+        });
+
+        const totalPast = completed + missed;
+        const consistency = totalPast > 0 ? Math.round((completed / totalPast) * 100) : 100;
+        const totalPlan = trainingPlan.length;
+        const overallProgress = Math.round((completed / totalPlan) * 100);
+
+        let quote = "Lekker bezig! Elke stap telt. 🏃‍♂️";
+        if (consistency >= 90) quote = "Legendarische discipline! Je bent een machine. 🔥";
+        else if (consistency >= 75) quote = "Sterk werk, houd dit ritme vast! 🚀";
+        else if (consistency < 50) quote = "Tijd voor een comeback! Je kunt het. 💪";
+
+        return { completed, missed, upcoming, consistency, overallProgress, quote };
+    }, [runs]);
+
     // Stats
     const now = new Date();
     const weekAgo = new Date(now);
@@ -99,44 +135,96 @@ export default function Dashboard() {
                 </button>
             </div>
 
-            <div className="grid grid-4" style={{ marginTop: "30px" }}>
-                <div className="card">
+            <Countdown RACE_DATE={RACE_DATE} />
+
+            <div className="motivation-grid">
+                <div className="card motivation-card">
+                    <div className="motivation-content">
+                        <div className="stat-label" style={{ color: '#a1a1a6', fontWeight: 600, fontSize: '12px' }}>DISCIPLINE SCORE</div>
+                        <div className="consistency-score">{motivationStats.consistency}%</div>
+                        <div style={{ color: '#a1a1a6', fontSize: '13px', marginTop: '4px' }}>
+                            Je hebt <strong>{motivationStats.completed}</strong> van de {motivationStats.completed + motivationStats.missed} geplande sessies voltooid.
+                        </div>
+
+                        <div className="status-pills">
+                            <div className="status-pill pill-done">
+                                <span className="pill-label">Done</span>
+                                <span className="pill-value">{motivationStats.completed}</span>
+                            </div>
+                            <div className="status-pill pill-missed">
+                                <span className="pill-label">Missed</span>
+                                <span className="pill-value">{motivationStats.missed}</span>
+                            </div>
+                            <div className="status-pill pill-upcoming">
+                                <span className="pill-label">To Go</span>
+                                <span className="pill-value">{motivationStats.upcoming}</span>
+                            </div>
+                        </div>
+
+                        <div className="motivation-quote">
+                            {motivationStats.consistency >= 75 ? "✅" : "💡"} {motivationStats.quote}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="card circle-progress-container stat-card">
+                    <div className="circle-progress-wrapper">
+                        <svg className="circle-progress-svg">
+                            <circle className="circle-bg" cx="70" cy="70" r="64" />
+                            <circle
+                                className="circle-fill"
+                                cx="70" cy="70" r="64"
+                                strokeDasharray={`${(motivationStats.overallProgress / 100) * 402} 402`}
+                            />
+                        </svg>
+                        <div className="circle-text">
+                            <span className="circle-percentage">{motivationStats.overallProgress}%</span>
+                            <span className="circle-label">Progress</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="grid grid-4" style={{ marginTop: "24px" }}>
+                <div className="card stat-card">
                     <div className="stat-number">
                         {Math.round(weeklyDistance * 10) / 10} km
                     </div>
                     <div className="stat-label">Weekly Distance</div>
                 </div>
-                <div className="card">
+                <div className="card stat-card">
                     <div className="stat-number">
                         {Math.round(longestRun * 10) / 10} km
                     </div>
                     <div className="stat-label">Longest Run</div>
                 </div>
-                <div className="card">
+                <div className="card stat-card">
                     <div className="stat-number">{avgPace}</div>
                     <div className="stat-label">Average Pace</div>
                 </div>
-                <div className="card">
+                <div className="card stat-card">
                     <div className="stat-number">4:30</div>
                     <div className="stat-label">Goal Time</div>
                 </div>
             </div>
 
-            <div className="card" style={{ marginTop: "40px" }}>
+            <div className="card" style={{ marginTop: "32px" }}>
                 <h3>Weekly Mileage</h3>
                 <div style={{ height: "300px", marginTop: "16px" }}>
                     {weeklyData.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={weeklyData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                <XAxis dataKey="week" tick={{ fontSize: 12 }} />
-                                <YAxis tick={{ fontSize: 12 }} unit=" km" />
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                                <XAxis dataKey="week" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fontSize: 12 }} unit=" km" axisLine={false} tickLine={false} />
                                 <Tooltip
+                                    cursor={{ fill: '#f5f5f7' }}
                                     formatter={(value) => [`${value} km`, "Distance"]}
                                     contentStyle={{
-                                        borderRadius: "12px",
+                                        borderRadius: "16px",
                                         border: "none",
-                                        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                                        boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+                                        padding: '12px'
                                     }}
                                 />
                                 <Bar dataKey="km" fill="#0071e3" radius={[8, 8, 0, 0]} />
@@ -150,16 +238,16 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            <div className="card" style={{ marginTop: "30px" }}>
+            <div className="card" style={{ marginTop: "32px" }}>
                 <TrainingPlan completedRuns={runs} onRefresh={fetchRuns} />
             </div>
 
-            <div className="card" style={{ marginTop: "30px" }}>
+            <div className="card" style={{ marginTop: "32px" }}>
                 <AddRunForm onRunAdded={fetchRuns} />
             </div>
 
-            <div className="card" style={{ marginTop: "30px" }}>
-                <h3>Run History</h3>
+            <div className="card" style={{ marginTop: "32px" }}>
+                <h3 style={{ marginBottom: '16px' }}>Run History</h3>
                 {loading ? (
                     <p className="stat-label">Loading...</p>
                 ) : runs.length === 0 ? (
@@ -169,14 +257,14 @@ export default function Dashboard() {
                         {runs.map((run) => (
                             <div key={run.id} className="run-item">
                                 <div className="run-info">
-                                    <strong>{run.date}</strong>
-                                    <span>{run.distance} km</span>
+                                    <strong style={{ fontSize: '15px' }}>{run.date}</strong>
+                                    <span style={{ fontWeight: 600 }}>{run.distance} km</span>
                                     <span>{run.duration} min</span>
-                                    <span className="stat-label">
+                                    <span className="stat-label" style={{ background: '#f2f2f7', padding: '2px 8px', borderRadius: '6px' }}>
                                         {formatPace(run.distance, Number(run.duration))} /km
                                     </span>
                                     {run.notes && (
-                                        <span className="stat-label">{run.notes}</span>
+                                        <span className="stat-label" style={{ fontStyle: 'italic' }}>"{run.notes}"</span>
                                     )}
                                 </div>
                                 <button
