@@ -68,23 +68,6 @@ export default function TrainingPlan({ completedRuns = [], onRefresh }) {
         setSyncing(false);
     }
 
-    async function handleCleanup() {
-        if (!window.confirm("Weet je zeker dat je alle 'Run' items uit je hoofdagenda wilt verwijderen? Dit raakt alleen de trainingen van dit dashboard.")) return;
-
-        setCleaning(true);
-        setSyncStatus("Hoofdagenda aan het opschonen... 🧹");
-        try {
-            await requestAccessToken();
-            const count = await cleanupPrimaryCalendar();
-            setSyncStatus(`${count} items verwijderd uit hoofdagenda! ✨`);
-            setTimeout(() => setSyncStatus(null), 5000);
-        } catch (err) {
-            console.error("Cleanup error:", err);
-            setSyncStatus("Fout bij opschonen. ❌");
-        }
-        setCleaning(false);
-    }
-
     async function handleToggle(session) {
         if (!user) return;
         const isDone = !!completedDates[session.date];
