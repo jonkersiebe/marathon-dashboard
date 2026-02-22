@@ -1,16 +1,66 @@
-# React + Vite
+# Marathon Dashboard 🏃‍♂️
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A premium, Apple-minimalist dashboard for marathon training, built with React, Vite, and Firebase. This dashboard helps runners track their progress, manage their training plan, and visualize their performance.
 
-Currently, two official plugins are available:
+## ✨ Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Personal Dashboard**: Real-time stats including weekly distance, longest run, and average pace.
+- **Dynamic Training Plan**: A full 32-week marathon training plan (from Feb 2026 to Nov 2026) built in.
+- **Check-off System**: Mark training sessions as completed with a dedicated duration popup.
+- **Performance Visualization**: Weekly mileage charts using Recharts.
+- **Secure Authentication**: Firebase Auth for personal accounts and data isolation.
+- **Live Persistence**: Data is stored securely in Firebase Firestore.
+- **Coming Soon**: Google Calendar Sync to keep your training on schedule across all devices.
 
-## React Compiler
+## 🚀 Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Frontend**: React (Vite)
+- **Styling**: Vanilla CSS (Apple Minimal Design System)
+- **Database/Auth**: Firebase (Firestore & Authentication)
+- **Charts**: Recharts
+- **Icons**: SF Pro Display inspired typography
 
-## Expanding the ESLint configuration
+## 🛠️ Installation & Setup
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/jonkersiebe/marathon-dashboard.git
+   cd marathon-dashboard
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Configure Environment Variables**:
+   Create a `.env` file in the root directory (use `.env.example` as a template) and add your Firebase configuration:
+   ```env
+   VITE_FIREBASE_API_KEY=your_api_key
+   VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+   VITE_FIREBASE_PROJECT_ID=your_project_id
+   VITE_FIREBASE_STORAGE_BUCKET=your_project.firebasestorage.app
+   VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+   VITE_FIREBASE_APP_ID=your_app_id
+   VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
+   ```
+
+4. **Run the development server**:
+   ```bash
+   npm run dev
+   ```
+
+## 🔐 Security Note
+
+This project uses environment variables to keep sensitive Firebase keys out of version control. Ensure your `.env` file is added to `.gitignore`.
+
+## 📈 Roadmap
+
+- [x] Base Layout & Design System
+- [x] Firebase Integration (Auth & Firestore)
+- [x] Dynamic Dashboard Stats
+- [x] Weekly Mileage Chart
+- [x] Complete 32-week Training Plan
+- [x] Training Session Check-off with duration input
+- [ ] Google Calendar API Integration
+- [ ] Progress sharing via Social Media
