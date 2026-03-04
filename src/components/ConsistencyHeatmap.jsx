@@ -37,8 +37,8 @@ export default function ConsistencyHeatmap({ completedRuns = [] }) {
     }, [completedDates, today]);
 
     return (
-        <div className="stat-card glass-panel" style={{ gridColumn: "span 2", overflow: "hidden" }}>
-            <div style={{ marginBottom: "16px" }}>
+        <div className="card stat-card glass-panel" style={{ gridColumn: "span 2" }}>
+            <div style={{ marginBottom: "20px" }}>
                 <span className="stat-label">🔥 Consistency Heatmap</span>
             </div>
 
@@ -57,17 +57,18 @@ export default function ConsistencyHeatmap({ completedRuns = [] }) {
                                 className="heatmap-cell"
                                 title={`${day.date}: ${day.distance}km - ${day.isCompleted ? "Voltooid" : "Gepland"}`}
                                 style={{
-                                    width: "12px",
-                                    height: "12px",
-                                    borderRadius: "2px",
+                                    width: "14px",
+                                    height: "14px",
+                                    borderRadius: "3px",
                                     backgroundColor: day.isCompleted
-                                        ? "var(--primary-color)"
+                                        ? "var(--accent)"
                                         : day.isPast
                                             ? "rgba(255, 59, 48, 0.2)" // Missed
-                                            : "rgba(255, 255, 255, 0.1)", // Future
-                                    border: day.date === today ? "1px solid white" : "none",
-                                    transition: "transform 0.2s",
-                                    cursor: "help"
+                                            : "rgba(0, 0, 0, 0.05)", // Future
+                                    border: day.date === today ? "1px solid var(--accent)" : "none",
+                                    transition: "all 0.2s ease",
+                                    cursor: "help",
+                                    boxShadow: day.isCompleted ? "0 0 8px rgba(0, 113, 227, 0.2)" : "none"
                                 }}
                             />
                         ))}
@@ -75,15 +76,15 @@ export default function ConsistencyHeatmap({ completedRuns = [] }) {
                 ))}
             </div>
 
-            <div style={{ marginTop: "12px", display: "flex", gap: "16px", fontSize: "0.8rem", opacity: 0.7 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                    <div style={{ width: "8px", height: "8px", background: "var(--primary-color)", borderRadius: "1px" }} /> Voltooid
+            <div style={{ marginTop: "20px", display: "flex", gap: "20px", fontSize: "0.75rem", fontWeight: "600", opacity: 0.8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <div style={{ width: "10px", height: "10px", background: "var(--accent)", borderRadius: "2px" }} /> VOLTOOID
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                    <div style={{ width: "8px", height: "8px", background: "rgba(255, 255, 255, 0.1)", borderRadius: "1px" }} /> Gepland
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <div style={{ width: "10px", height: "10px", background: "rgba(0, 0, 0, 0.05)", borderRadius: "2px" }} /> GEPLAND
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                    <div style={{ width: "8px", height: "8px", background: "rgba(255, 59, 48, 0.2)", borderRadius: "1px" }} /> Gemist
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <div style={{ width: "10px", height: "10px", background: "rgba(255, 59, 48, 0.2)", borderRadius: "2px" }} /> GEMIST
                 </div>
             </div>
         </div>
