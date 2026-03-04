@@ -137,7 +137,7 @@ export async function deleteCalendarEvent(eventId) {
   });
 }
 
-export async function syncCalendarEvent(session, isCompleted = false) {
+export async function syncCalendarEvent(session, isCompleted = false, actualDistance = null, actualDuration = null) {
   const calId = await getMarathonCalendarId();
   console.log(`Syncing to ${calId}: ${session.date}`);
   
@@ -151,8 +151,18 @@ export async function syncCalendarEvent(session, isCompleted = false) {
 
   const existingEvent = existingEvents[0];
   
-  const title = (isCompleted ? "✅ " : "🏃 ") + `${session.type} Run: ${session.distance} km`;
-  const description = `${session.notes}\n\nType: ${session.type}\nAfstand: ${session.distance} km\nStatus: ${isCompleted ? "Voltooid" : "Gepland"}\n\n[MarathonDashboard]`;
+  const dist = actualDistance !== null ? actualDistance : session.distance;
+  const distNote = actualDistance !== null && actualDistance !== session.distance 
+    ? ` (gepland: ${session.distance} km)` 
+    : "";
+
+  const title = (isCompleted ? "✅ " : "🏃 ") + `${session.type} Run: ${dist} km${isCompleted ? "" : distNote}`;
+  
+  let description = `${session.notes}\n\nType: ${session.type}\nAfstand: ${dist} km${distNote}\n`;
+  if (isCompleted && actualDuration) {
+    description += `Duur: ${actualDuration} min\n`;
+  }
+  description += `Status: ${isCompleted ? "Voltooid" : "Gepland"}\n\n[MarathonDashboard]`;
 
   const event = {
     summary: title,

@@ -29,6 +29,7 @@ export default function TrainingPlan({ completedRuns = [], onRefresh }) {
     const [toggling, setToggling] = useState({});
     const [modalSession, setModalSession] = useState(null);
     const [duration, setDuration] = useState("");
+    const [dist, setDist] = useState("");
     const [syncing, setSyncing] = useState(false);
     const [syncStatus, setSyncStatus] = useState(null);
 
@@ -86,9 +87,10 @@ export default function TrainingPlan({ completedRuns = [], onRefresh }) {
             }
             setToggling(prev => ({ ...prev, [session.date]: false }));
         } else {
-            // Open modal for duration
+            // Open modal for duration/distance
             setModalSession(session);
             setDuration("");
+            setDist(session.distance);
         }
     }
 
@@ -102,7 +104,7 @@ export default function TrainingPlan({ completedRuns = [], onRefresh }) {
         try {
             await addRun(user.uid, {
                 date: sessionToToggle.date,
-                distance: sessionToToggle.distance,
+                distance: dist || sessionToToggle.distance,
                 duration: duration || 0,
                 notes: sessionToToggle.notes,
                 isPlanRun: true,
@@ -110,7 +112,7 @@ export default function TrainingPlan({ completedRuns = [], onRefresh }) {
             });
 
             // Direct Calendar Sync (Set to completed)
-            await syncCalendarEvent(sessionToToggle, true).catch(e => console.log("Silent sync fail:", e));
+            await syncCalendarEvent(sessionToToggle, true, Number(dist), duration).catch(e => console.log("Silent sync fail:", e));
 
             if (onRefresh) await onRefresh();
         } catch (err) {
@@ -299,6 +301,17 @@ export default function TrainingPlan({ completedRuns = [], onRefresh }) {
                                 month: "long",
                             })} - {modalSession.distance} km
                         </p>
+
+                        <div className="form-group">
+                            <label>Afstand (km)</label>
+                            <input
+                                type="number"
+                                step="0.1"
+                                value={dist}
+                                onChange={(e) => setDist(e.target.value)}
+                                placeholder="Aantal km gelopen"
+                            />
+                        </div>
 
                         <div className="form-group">
                             <label>Duur (minuten)</label>
