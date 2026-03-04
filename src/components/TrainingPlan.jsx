@@ -37,11 +37,11 @@ export default function TrainingPlan({ completedRuns = [], onRefresh }) {
         initGoogleIdentity();
     }, []);
 
-    const completedDates = useMemo(() => {
-        // Map of date -> runId for plan runs
+    const completedRunsMap = useMemo(() => {
+        // Map of date -> run object for plan runs
         const map = {};
         completedRuns.forEach((r) => {
-            if (r.planDate) map[r.planDate] = r.id;
+            if (r.planDate) map[r.planDate] = r;
         });
         return map;
     }, [completedRuns]);
@@ -55,8 +55,14 @@ export default function TrainingPlan({ completedRuns = [], onRefresh }) {
             let count = 0;
             for (const session of trainingPlan) {
                 setSyncStatus(`Synchroniseren: ${++count}/${trainingPlan.length}`);
-                const isDone = !!completedDates[session.date];
-                await syncCalendarEvent(session, isDone);
+                const completedRun = completedRunsMap[session.date];
+                const isDone = !!completedRun;
+                await syncCalendarEvent(
+                    session,
+                    isDone,
+                    isDone ? completedRun.distance : null,
+                    isDone ? completedRun.duration : null
+                );
                 // Small delay to avoid Rate Limit Exceeded
                 await new Promise(resolve => setTimeout(resolve, 100));
             }
@@ -71,7 +77,8 @@ export default function TrainingPlan({ completedRuns = [], onRefresh }) {
 
     async function handleToggle(session) {
         if (!user) return;
-        const isDone = !!completedDates[session.date];
+        const completedRun = completedRunsMap[session.date];
+        const isDone = !!completedRun;
 
         if (isDone) {
             // Untoggle immediately
@@ -156,10 +163,10 @@ export default function TrainingPlan({ completedRuns = [], onRefresh }) {
         : weeks.filter((w) => w.week >= currentWeek - 1 && w.week <= currentWeek + 3);
 
     // Next planned session
-    const nextSession = trainingPlan.find((s) => s.date >= today && !completedDates[s.date]);
+    const nextSession = trainingPlan.find((s) => s.date >= today && !completedRunsMap[s.date]);
 
     // Progress
-    const totalDone = Object.keys(completedDates).length;
+    const totalDone = Object.keys(completedRunsMap).length;
     const progressPct = Math.round((totalDone / trainingPlan.length) * 100);
 
     return (
@@ -250,8 +257,8 @@ export default function TrainingPlan({ completedRuns = [], onRefresh }) {
                         </div>
                         <div className="week-sessions">
                             {w.sessions.map((s) => {
-                                const doneId = completedDates[s.date];
-                                const done = !!doneId;
+                                const completedRun = completedRunsMap[s.date];
+                                const done = !!completedRun;
                                 const isToday = s.date === today;
                                 const isLoading = toggling[s.date];
 
@@ -279,7 +286,18 @@ export default function TrainingPlan({ completedRuns = [], onRefresh }) {
                                         >
                                             {s.type}
                                         </span>
-                                        <span className="session-km">{s.distance} km</span>
+                                        <span className="session-km">
+                                            {done && completedRun.distance !== s.distance ? (
+                                                <>
+                                                    <span style={{ textDecoration: "line-through", opacity: 0.6, fontSize: "0.9em", marginRight: "4px" }}>
+                                                        {s.distance}
+                                                    </span>
+                                                    <strong>{completedRun.distance}</strong> km
+                                                </>
+                                            ) : (
+                                                `${s.distance} km`
+                                            )}
+                                        </span>
                                         <span className="stat-label session-notes">{s.notes}</span>
                                         {isLoading ? (
                                             <span className="stat-label">...</span>
