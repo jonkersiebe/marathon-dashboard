@@ -115,17 +115,23 @@ export async function findAllExistingEvents(date) {
   const timeMin = new Date(d.getTime() - 86400000).toISOString();
   const timeMax = new Date(d.getTime() + 86400000).toISOString();
 
-  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&q=Run`;
+  // Search for anything on that date, we will filter below
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true`;
   
   const data = await googleApiFetch(url);
   const items = data.items || [];
 
   return items.filter(item => {
+    // Check if the event starts on the specific date (all-day events use 'date')
     const eventDate = item.start.date || (item.start.dateTime && item.start.dateTime.split("T")[0]);
     if (eventDate !== date) return false;
 
     const hasTag = item.description && item.description.includes("[MarathonDashboard]");
-    const looksLikeRun = item.summary && (item.summary.includes("Run:") || item.summary.includes("Run: "));
+    const looksLikeRun = item.summary && (
+      item.summary.includes("Run:") || 
+      item.summary.includes("✅") || 
+      item.summary.includes("🏃")
+    );
     return hasTag || looksLikeRun;
   });
 }

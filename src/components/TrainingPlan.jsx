@@ -112,7 +112,14 @@ export default function TrainingPlan({ completedRuns = [], onRefresh }) {
             });
 
             // Direct Calendar Sync (Set to completed)
-            await syncCalendarEvent(sessionToToggle, true, Number(dist), duration).catch(e => console.log("Silent sync fail:", e));
+            try {
+                const finalDist = dist ? Number(dist) : sessionToToggle.distance;
+                await syncCalendarEvent(sessionToToggle, true, finalDist, duration);
+            } catch (e) {
+                console.error("Sync fail:", e);
+                setSyncStatus(`Agendasynchronisatie mislukt: ${e.message}`);
+                setTimeout(() => setSyncStatus(null), 5000);
+            }
 
             if (onRefresh) await onRefresh();
         } catch (err) {
