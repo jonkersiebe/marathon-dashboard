@@ -5,6 +5,10 @@ import TrainingPlan from "../components/TrainingPlan";
 import { useAuth } from "../context/AuthContext";
 import { getRuns, deleteRun } from "../services/runs";
 import { trainingPlan, RACE_DATE } from "../data/trainingPlan";
+import PredictorSection from "../components/PredictorSection";
+import ConsistencyHeatmap from "../components/ConsistencyHeatmap";
+import StatsCard from "../components/StatsCard";
+import "../styles/theme.css";
 import {
     BarChart,
     Bar,
@@ -20,7 +24,7 @@ function formatPace(distanceKm, durationMin) {
     const pace = durationMin / distanceKm;
     const mins = Math.floor(pace);
     const secs = Math.round((pace - mins) * 60);
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
+    return `${mins}:${secs.toString().padStart(2, "0")} `;
 }
 
 function getWeeklyData(runs) {
@@ -178,6 +182,7 @@ export default function Dashboard() {
     const avgPace = formatPace(totalDist, totalDur);
 
     const weeklyData = getWeeklyData(runs);
+    const weeklyTotal = Math.round(weeklyDistance * 10) / 10;
 
     return (
         <Layout>
@@ -238,27 +243,36 @@ export default function Dashboard() {
                 </div>
             </div>
 
+            <div className="grid grid-2" style={{ marginTop: "24px" }}>
+                <PredictorSection completedRuns={runs} />
+                <ConsistencyHeatmap completedRuns={runs} />
+            </div>
+
             <div className="grid grid-4" style={{ marginTop: "24px" }}>
-                <div className="card stat-card">
-                    <div className="stat-number">
-                        {Math.round(weeklyDistance * 10) / 10} km
-                    </div>
-                    <div className="stat-label">Weekly Distance</div>
-                </div>
-                <div className="card stat-card">
-                    <div className="stat-number">
-                        {Math.round(longestRun * 10) / 10} km
-                    </div>
-                    <div className="stat-label">Longest Run</div>
-                </div>
-                <div className="card stat-card">
-                    <div className="stat-number">{avgPace}</div>
-                    <div className="stat-label">Average Pace</div>
-                </div>
-                <div className="card stat-card">
-                    <div className="stat-number">4:30</div>
-                    <div className="stat-label">Goal Time</div>
-                </div>
+                <StatsCard
+                    title="Km deze week"
+                    value={weeklyTotal}
+                    unit="km"
+                    icon="🏃‍♂️"
+                />
+                <StatsCard
+                    title="Longest Run"
+                    value={Math.round(longestRun * 10) / 10}
+                    unit="km"
+                    icon="🏔️"
+                />
+                <StatsCard
+                    title="Gemiddeld Tempo"
+                    value={avgPace}
+                    unit="/km"
+                    icon="⚡"
+                />
+                <StatsCard
+                    title="Doeltijd"
+                    value="4:30"
+                    unit=""
+                    icon="🎯"
+                />
             </div>
 
             <div className="card" style={{ marginTop: "32px" }}>
